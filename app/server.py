@@ -48,7 +48,7 @@ example = {
                         "item_name": "Krossovki naike2",
                         "item_desc": "Krosovki naike2 original real'no",
                         "item_cost": "1200",
-                        "optional_parametres": {
+                        "optional_parameters": {
                             "size": "35"
                         },
                         "item_count": "21"
@@ -61,14 +61,13 @@ example = {
         "bebra": "True"
     }
 }
-
 # Описание класса Item, товары, которые пользователь приобретает
 class Item(BaseModel):
-    item_id: str  = Field(pattern=r"\d{8}",max_length=8)
+    item_id: str = Field(min_length=8,max_length=8)
     item_name: str = Field(pattern=r"[a-zA-Z|\d\s]{3,50}", max_length=50)
     item_desc: str | None = Field(pattern=r"[a-zA-Z|\d\s]{5,250}", default=None, max_length=250)
     item_cost: str = Field(pattern=r"(^[\d],\d{1,50})|([^0]\d{1,50})", max_length=50)
-    optional_parametres: dict | None = None
+    optional_parameters: dict | None = None
     # Добавить обработку ошибки с минусом в кол-ве
     item_count: str = Field(pattern=r"\d{1,2}", max_length=2)
 
@@ -112,6 +111,8 @@ class Query(BaseModel):
 @app.post("/add-order/", response_model_exclude_unset=True)
 async def add_order(query: Annotated[Query, Body(embed=True)]) -> Query:
     return query
+
+
 
 # 1 проверка на работу класса Item
 #@app.post("/item-test/", response_model=Item, response_model_exclude_unset=True)
