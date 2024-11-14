@@ -1,66 +1,72 @@
 from fastapi import FastAPI, HTTPException, Body, status
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, PositiveFloat 
 from typing import Annotated, Any
 from datetime import date
+from .db_interface import DatabaseController
 # Название модуля
 app = FastAPI()
 
 # Принятие заказа
 # BODY запрос JSON с методом POST по адресу localhost:8000/add-order/
 example = {
-    "company_name": "OZON",
-    "query_id": "1234567890123456",
-    "orders": [
-        {
-            "order_id": "12345678",
-            "order_status": "In delivery",
-            "order_desc": "Postychat v dver",
-            "order_dest_desc": {
-                "creation_date": "2024-11-09",
-                "destination_date": "2024-12-01",
-                "destination_type": "Courier",
-                "destionation_address": "Bebrovskya 15"
-            },
-            "order_pay_desc": {
-                "payment_status": "Already",
-                "payment_type": "Online",
-                "payment_currency": "rub"
-            },
-            "client_desc": {
-                "client_id": "12345678",
-                "client_name": "Ivan",
-                "client_email": "Bebra@mail.ru"
-            },
-            "order_items": {
-                "items": [
-                    {
-                        "item_id": "12345678",
-                        "item_name": "Krossovki naike",
-                        "item_desc": "Krosovki naike original real'no",
-                        "item_cost": "1200",
-                        "optional_parametres": {
-                            "size": "45"
+    "query": {
+        "company_name": "OZON",
+        "query_id": "1234567890123456",
+        "orders": [
+            {
+                "order_id": "12345678",
+                "order_status": "In delivery",
+                "order_desc": "Postychat v dver",
+                "order_dest_desc": {
+                    "creation_date": "2024-11-09",
+                    "destination_date": "2024-12-01",
+                    "destination_type": "Courier",
+                    "destionation_address": "Bebrovskya 15"
+                },
+                "order_pay_desc": {
+                    "payment_status": "Already",
+                    "payment_type": "Online",
+                    "payment_currency": "rub"
+                },
+                "client_desc": {
+                    "client_id": "12345678",
+                    "client_name": "Ivan",
+                    "client_email": "Bebra@mail.ru"
+                },
+                "order_items": {
+                    "items": [
+                        {
+                            "item_id": "12345678",
+                            "item_name": "Krossovki naike",
+                            "item_desc": "Krosovki naike original real'no",
+                            "item_cost": "1200",
+                            "optional_parametres": {
+                                "size": "45"
+                            },
+                            "item_count": "1"
                         },
-                        "item_count": "1"
-                    },
-                    {
-                        "item_id": "12345178",
-                        "item_name": "Krossovki naike2",
-                        "item_desc": "Krosovki naike2 original real'no",
-                        "item_cost": "1200",
-                        "optional_parameters": {
-                            "size": "35"
-                        },
-                        "item_count": "21"
-                    }
-                ]
+                        {
+                            "item_id": "12345178",
+                            "item_name": "Krossovki naike2",
+                            "item_desc": "Krosovki naike2 original real'no",
+                            "item_cost": "1200",
+                            "optional_parameters": {
+                                "size": "35"
+                            },
+                            "item_count": "21"
+                        }
+                    ]
+                }
             }
+        ],
+        "query_params": {
+            "bebra": "True"
         }
-    ],
-    "query_params": {
-        "bebra": "True"
     }
 }
+
+# Запуск БД
+controller = DatabaseController()
 # Описание класса Item, товары, которые пользователь приобретает
 class Item(BaseModel):
     item_id: str = Field(min_length=8,max_length=8)
@@ -104,16 +110,20 @@ class Order(BaseModel):
 class Query(BaseModel):
     company_name: str = Field(pattern=r"[a-zA-Z|\d\s]{3,50}", max_length=50)
     query_id: str = Field(pattern=r"\d{16}", max_length=16)
-    orders: list[Order]
-    query_params: dict[str, bool]
+    orders: list[Order] | None
+    query_params: dict[str, bool] | None = None
 
 
-@app.post("/add-order/", response_model_exclude_unset=True)
-async def add_order(query: Annotated[Query, Body(embed=True)]) -> Query:
+@app.post("/add-query/", response_model_exclude_unset=True)
+async def add_query(query: Annotated[Query, Body(embed=True)]) -> Any: 
+    try:
+        if controller.add_query(query):
+            return {"error":"this query is alredy exists!"}
+        else:
+            return {f"query with {query.query_id} id successfuly added."}
+    except Exception as e:
+        print(e)
     return query
-
-
-
 # 1 проверка на работу класса Item
 #@app.post("/item-test/", response_model=Item, response_model_exclude_unset=True)
 #async def test_item(item: Annotated[Item, Body(embed=True)], ) -> Item:
