@@ -75,6 +75,8 @@ async def add_query(
         id = uuid4()
         query.id = id
     db_query = Database.QueryDB.model_validate(query)
+    session.add(db_query)
+    session.commit()
 
     # Для заказа 
     orders = query.orders
@@ -90,6 +92,7 @@ async def add_query(
         db_order.query_id = query.id
         print(db_order)
         session.add(db_order)
+    session.commit()
     
     # Для предметов
     for order in orders:
@@ -100,23 +103,23 @@ async def add_query(
             db_item = Database.ItemDB.model_validate(item)
             db_item.order_id = order.id
             session.add(db_item)
+    session.commit()
     
     # Для опций
     for order in orders:
         for item in order.items:
             for optional_parameter in item.optional_parameters:
                 db_op = Database.OptionalParametersDB.model_validate(optional_parameter)
+                db_op.item_id = item.id
                 session.add(db_op)
-                
-
-
-    # Коммиты в дб
-    session.add(db_query)
     session.commit()
+                
+    # Возвращаем QueryBase
     return query
 
+# Удаление запроса
 @app.delete("/delete-query/")
-async def add_query(
+async def delete_query(
     query_id: Annotated[UUID, Body(embed=True)],
     session: Session = Depends(get_session)
 ):
@@ -125,4 +128,17 @@ async def add_query(
         raise HTTPException(status_code=404, detail="Запрос не найден")
     session.delete(query)
     session.commit()
-    return {f"{query_id}": "запрос успешно удален"}
+    return {f"{query_id}": "Запрос успешно удален"}
+
+# Обновление запроса
+@app.patch("/update-query/")
+async def update_query(
+    query_id: Annotated[UUID, Body(embed=True)],
+    parameter: Annotated[],
+    session: Session = Depends(get_session)
+):
+    query = session.get(Database.QueryDB, query_id)
+    if not query:
+        raise HTTPException(status_code=404, detail="Запрос не найден")
+    if order:
+        db_order = 
