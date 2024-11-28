@@ -108,4 +108,5 @@ class Query(QueryBase):
 ############################################################################################################################
 
 class DesktopQuery(Query):
-    method: str = FieldP(pattern=r"add|delete", max_length=6)
+    method: str = FieldP(pattern=r"POST|DELETE|GET", max_length=6)
+    object: str = FieldP(pattern=r"Query", max_length=6)
