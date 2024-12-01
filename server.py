@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from model_forms import *
-from fastapi import FastAPI, HTTPException, Body, Depends, Query as QueryF
+from fastapi import FastAPI, HTTPException, Body, Depends, Query as QueryF, Path
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -142,9 +142,9 @@ async def add_query(
         return JSONResponse(status_code=201, content=jsonable_encoder(query_get))
 
 # Удаление запроса
-@app.delete("/delete-query/")
+@app.delete("/delete-query/{query_id}")
 async def delete_query(
-    query_id: Annotated[UUID, Body(embed=True)],
+    query_id: Annotated[UUID, Path()],
     session: Session = Depends(get_session)
 ):
     query = session.get(Database.QueryDB, query_id)
@@ -154,7 +154,60 @@ async def delete_query(
     session.commit()
     return JSONResponse(status_code=200, content={f"{query_id}" : "Запрос успешно удален"})
 
-# //Добавить удаление заказа и предмета соотвт.
+@app.delete("/delete-order/{order_id}")
+async def delete_order(
+    order_id: Annotated[UUID, Path()],
+    session: Session = Depends(get_session)
+):
+    get_order = session.get(Database.OrderDB, order_id)
+        
+    if get_order:
+            
+        session.delete(get_order)
+        session.commit()
+        
+        return JSONResponse(status_code=200, content=f'Заказ с id: {order_id} успешно удален')
+        
+    else:
+        
+        return JSONResponse(status_code=404, content=f"Заказ с id: {order_id} не найден")
+    
+
+@app.delete("/delete-item/{item_id}")
+async def delete_item(
+    item_id: Annotated[UUID, Path()],
+    session: Session = Depends(get_session)
+):
+    get_item = session.get(Database.ItemDB, item_id)
+        
+    if get_item:
+            
+        session.delete(get_item)
+        session.commit()
+        
+        return JSONResponse(status_code=200, content=f'Заказ с id: {item_id} успешно удален')
+        
+    else:
+        
+        return JSONResponse(status_code=404, content=f"Заказ с id: {item_id} не найден")
+
+@app.delete("/delete-op/{op_id}")
+async def delete_op(
+    op_id: Annotated[UUID, Path()],
+    session: Session = Depends(get_session)
+):
+    get_op = session.get(Database.OptionalParametersDB, op_id)
+        
+    if get_op:
+            
+        session.delete(get_op)
+        session.commit()
+        
+        return JSONResponse(status_code=200, content=f'Заказ с id: {op_id} успешно удален')
+        
+    else:
+        
+        return JSONResponse(status_code=404, content=f"Заказ с id: {op_id} не найден")
 
 # Обновление запроса
 @app.patch("/update-orders/")
@@ -295,6 +348,130 @@ async def get_orders(
     else:
         orders = session.exec(select(Database.OrderDB).where(Database.OrderDB.query_id == query_id)).all()
         return JSONResponse(status_code=200, content=jsonable_encoder(orders))
+    
+@app.get("/get-query/{q_id}")
+async def get_query(*,
+    session: Session = Depends(get_session),
+    q_id: Annotated[UUID, Path()]
+):
+    query_get = session.get(Database.QueryDB, q_id)
+    
+    if not query_get:
+        
+        return JSONResponse(status_code=404, content=jsonable_encoder(f"Запрос с id {q_id} не существует."))
+    
+    else:
+        
+        query_get = query_get.model_dump()
+        
+        return_query = Query.model_validate(query_get)
+        
+        
+        orders_get = session.exec(select(Database.OrderDB).where(Database.OrderDB.query_id == q_id)).all()
+        
+        if orders_get:
+            
+            orders: list[Order] = []
+            
+            for order in orders_get:
+                
+                order = order.model_dump()
+                
+                order = Order.model_validate(order)
+                
+                items_get = session.exec(select(Database.ItemDB).where(Database.ItemDB.order_id == order.id)).all()
+                
+                orders.append(order)
+                
+                if items_get:
+                    
+                    items: list[Item] = []
+                        
+                    for item in items_get:
+                        
+                        item = item.model_dump()
+                        
+                        for key, value in item.items():
+                            
+                            item[key] = str(value)
+                            
+                        item = Item.model_validate(item)
+                        
+                        items.append(item)
+                        
+                        op_get = session.exec(select(Database.OptionalParametersDB).where(Database.OptionalParametersDB.item_id == item.id)).all()
+
+                        if op_get:
+                            
+                            ops: list[OptionalParameters] = []
+                            
+                            for op in op_get:
+                                
+                                op = op.model_dump()
+                                
+                                op = OptionalParameters.model_validate(op)
+                                
+                                ops.append(op)
+                            
+                            item.optional_parameters = ops
+
+                    order.items = items
+                    
+            return_query.orders = orders
+            
+            return JSONResponse(status_code=200, content=jsonable_encoder(return_query))
+
+        else:
+            
+            return JSONResponse(status_code=200, content=jsonable_encoder(return_query))
+        
+        
+
+@app.get("/get-order/{order_id}")
+async def get_order(
+    order_id: Annotated[UUID, Path()],
+    session: Session = Depends(get_session)
+):
+    get_order = session.get(Database.OrderDB, order_id)
+        
+    if get_order:
+        
+        return JSONResponse(status_code=200, content=jsonable_encoder(get_order))
+        
+    else:
+        
+        return JSONResponse(status_code=404, content=f"Заказ с id: {order_id} не найден")
+    
+
+@app.get("/get-item/{item_id}")
+async def get_item(
+    item_id: Annotated[UUID, Path()],
+    session: Session = Depends(get_session)
+):
+    get_item = session.get(Database.ItemDB, item_id)
+        
+    if get_item:
+        
+        return JSONResponse(status_code=200, content=jsonable_encoder(get_item))
+        
+    else:
+        
+        return JSONResponse(status_code=404, content=f"Товар с id: {item_id} не найден")
+
+@app.get("/get-op/{op_id}")
+async def get_op(
+    op_id: Annotated[UUID, Path()],
+    session: Session = Depends(get_session)
+):
+    get_op = session.get(Database.OptionalParametersDB, op_id)
+        
+    if get_op:
+        
+        return JSONResponse(status_code=200, content=jsonable_encoder(get_op))
+        
+    else:
+        
+        return JSONResponse(status_code=404, content=f"Заказ с id: {op_id} не найден")
     
 
 @app.get("/get-items/{order_id}")

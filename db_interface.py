@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Field, create_engine, text
+from pydantic import Field as FieldP, BaseModel
 import uuid
 from datetime import date
 

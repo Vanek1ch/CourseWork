@@ -2,23 +2,131 @@ import os
 import json
 import mimetypes as mt
 import re
+import uuid
 from pydantic import ValidationError
-from model_forms import DesktopQuery
-from sqlmodel import Session, select
-from fastapi import Depends
+from model_forms import DesktopQuery, DesktopQueryDelete, DesktopOrderDelete, DesktopItemDelete, DesktopOPDelete, Order, Item, OptionalParameters
+from db_interface import Database
+from sqlmodel import Session
 from db_interface import Database
 
 Controller = Database()
 Controller.init_db() # later to delete because of server
 
-engine = Controller.return_engine() 
+engine = Controller.return_engine()
 
 # func to get session
 def get_session():
-    with Session(engine) as session:
-        yield session         
+    session = Session(engine)
+    return session
 
-class FilesController():
+""" work in progress 
+class QueryesOperator:
+    
+    def find_query(
+        file_data: dict, session: Session, db_class: Database,
+        return_model_id: bool | None, is_start_func: bool | None,
+        find_model_name: str | None, validation_class: str,
+        last_model_id: str | None, last_model_id_name: str | None) -> str | bool:
+        
+        if is_start_func:
+            
+            try:
+                        
+                json_dump = json.dumps(file_data)
+                validation_class.model_validate_json(json_dump) # //need to fix model validating
+            
+            except ValidationError as err:
+                session.close()
+                print(err)
+                return False
+            
+            q: uuid.UUID = None
+            
+            # getting query id to get session 
+            for key, value in file_data.items():
+                
+                if key == 'id':
+                    
+                    q_id = uuid.UUID(value)
+            
+            q_get = session.get(db_class, q_id)
+                    
+            if q_get:
+                        
+                return False
+                
+            else:
+                
+                try:
+                    
+                    obj = db_class.model_validate(file_data)
+                                
+                    session.add(obj)
+
+                except Exception as e:
+                    session.close()
+                    print(e)
+                    return False
+            
+            if return_model_id:
+                
+                return q_id
+        
+        else:
+            
+            for key, value in file_data.items():
+                
+                if key == find_model_name and isinstance(value, list):
+                    
+                    for q in value:
+                        
+                        try:
+                            
+                            json_dump = json.dumps(q)
+                            validation_class.model_validate_json(json_dump)
+                            
+                        except ValidationError as err:
+                            
+                            print(err)
+                            return False
+                        
+                        q_id: uuid.UUID = None
+                        
+                        if isinstance(q, dict):
+                            
+                            for key, value in q.items():
+                                
+                                if key == 'id':
+                                    
+                                    q_id = uuid.UUID(value)
+                            
+                            if q_id:
+                                
+                                q_get = session.get(db_class, q_id)
+                                
+                                if q_get:
+                                    
+                                    raise ValidationError
+                                
+                                else:
+                                    
+                                    try:
+                                        
+                                        obj = db_class.model_validate(q)
+                                        
+                                        obj[last_model_id_name] = last_model_id
+                                        
+                                        session.add(obj)
+
+                                    except Exception as err:
+                                        
+                                        return False
+            
+            if return_model_id:
+                
+                return q_id
+"""
+class FilesController:
     
     def __init__(self):
         #files and dir
@@ -127,7 +235,7 @@ class FilesController():
                         
                         parameters_validation.append(True)
                     
-                    elif name == 'object' and parameter_value in ['Query','Item','Order']:
+                    elif name == 'object' and parameter_value in ['Query','Item','Order','OP']:
                         
                         self.cur_object = parameter_value
                         
@@ -150,27 +258,40 @@ class FilesController():
             pass
         
     
-    # inner file validation
-    def file_processing(self, file: str,
-    session: Session = Depends(get_session)) -> bool:
-        
+    # inner file validation //can be shorter with adding logic update func
+    def file_processing(self,
+        file: str
+        #controller = QueryesOperator(),
+        ) -> bool: # add logic
+        session = get_session()
+            
         if self.cur_method  == 'POST' and self.cur_object == 'Query':
             
+            ''' ///work in progress
+            last_model_id = controller.find_query(file_data=self.cur_file_data,
+            session = session, db_class = Database.QueryDB, return_model_id=True,
+            is_start_func = True, validation_class = DesktopQuery)
+            '''
+            
             try:
-                DesktopQuery.model_validate_json(str(self.cur_file_data)) # //need to fix model validating
+                
+                json_dump = json.dumps(self.cur_file_data)
+                DesktopQuery.model_validate_json(json_dump) # //need to fix model validating
             
             except ValidationError as err:
+                session.close()
                 print(err)
                 return False
             
-            query_id: str = None
+            query_id: uuid.UUID = None
             
             # getting query id to get session 
             for key, value in self.cur_file_data.items():
                 
                 if key == 'id':
                     
-                    query_id = value
+                    query_id = uuid.UUID(value)
+                    
             
             if query_id:
             
@@ -182,13 +303,317 @@ class FilesController():
                 
                 else:
                     
-                    pass # add logic
+                    try:
+                        # for query model
+                        obj = Database.QueryDB.model_validate(self.cur_file_data)
+                        
+                        session.add(obj)
+                        
+                        # for orders
+                        for key, value in self.cur_file_data.items():
+                            
+                            if key == "orders" and isinstance(value, list):
+                                
+                                for order in value:
+                                    
+                                    try:
+                                        
+                                        json_dump = json.dumps(order)
+                                        Order.model_validate_json(json_dump)
+                                    
+                                    except ValidationError as err:
+                                        print(err)
+                                        return False
+
+                                    order_id: uuid.UUID = None
+                                    
+                                    if isinstance(order, dict):
+                                        
+                                        for key, value in order.items():
+                                            
+                                            if key == 'id':
+                                                
+                                                order_id = uuid.UUID(value)
+                                                
+                                        if order_id:
+                                            
+                                            order_get = session.get(Database.OrderDB, order_id)
+                                            
+                                            if order_get:
+                                                
+                                                raise ValidationError #// change err type
+                                            
+                                            else:
+                                                
+                                                try:
+                                                    
+                                                    obj = Database.OrderDB.model_validate(order)
+                                                    
+                                                    obj.query_id = query_id
+                                                
+                                                    session.add(obj)
+
+                                                except Exception as err:
+                                                    
+                                                    print(err)
+                                            
+                                            # for items
+                                        for key, value in order.items():
+                                                
+                                            if key == 'items' and isinstance(value, list):
+                                                
+                                                for item in value:
+                                                    
+                                                    try:
+                                        
+                                                        json_dump = json.dumps(item)
+                                                        Item.model_validate_json(json_dump)
+                                                    
+                                                    except ValidationError as err:
+                                                        print(err)
+                                                        return False
+
+                                                    item_id: uuid.UUID = None
+                                                    
+                                                    if isinstance(item, dict):
+                                        
+                                                        for key, value in item.items():
+                                                            
+                                                            if key == 'id':
+                                                                
+                                                                item_id = uuid.UUID(value)
+                                                                
+                                                        if item_id:
+                                                            
+                                                            item_get = session.get(Database.ItemDB, item_id)
+                                                            
+                                                            if item_get:
+                                                                
+                                                                raise ValidationError #// change err type
+                                                            
+                                                            else:
+                                                                
+                                                                try:
+                                                                    
+                                                                    obj = Database.ItemDB.model_validate(item)
+                                                                    
+                                                                    obj.order_id = order_id
+                                                                
+                                                                    session.add(obj)
+
+                                                                except Exception as err:
+                                                                    
+                                                                    print(err)
+                                                            
+                                                        for key, value in item.items():
+                                                            # for op
+                                                            if key == 'optional_parameters' and isinstance(value, list):
+                                                                
+                                                                for parameter in value:
+                                                                    
+                                                                    try:
+                                        
+                                                                        json_dump = json.dumps(parameter)
+                                                                        
+                                                                        OptionalParameters.model_validate_json(json_dump)
+                                                                    
+                                                                    except ValidationError as err:
+                                                                        
+                                                                        print(err)
+                                                                        
+                                                                        return False
+
+                                                                    op_id: uuid.UUID = None
+                                                                    
+                                                                    if isinstance(parameter, dict):
+                                                        
+                                                                        for key, value in parameter.items():
+                                                                            
+                                                                            if key == 'id':
+                                                                                
+                                                                                op_id = uuid.UUID(value)
+                                                                                
+                                                                        if op_id:
+                                                                            
+                                                                            op_get = session.get(Database.OptionalParametersDB, op_id)
+                                                                            
+                                                                            if op_get:
+                                                                                
+                                                                                raise ValidationError #// change err type
+                                                                            
+                                                                            else:
+                                                                                
+                                                                                try:
+                                                                                    
+                                                                                    obj = Database.OptionalParametersDB.model_validate(parameter)
+                                                                                    
+                                                                                    obj.item_id = item_id
+                                                                                
+                                                                                    session.add(obj)
+
+                                                                                except Exception as err:
+                                                                                    
+                                                                                    print(err)
+                                        else:
+                                            pass
+                                            
+                            else:
+                                
+                                pass            
+                                            
+                                        
+                                        
+                        
+                    except Exception as e:
+                        session.close()
+                        print(e)
+                        return False
             
             else:
-                pass # need logic
                 
-    
-    
+                return False# need logic"""
+        
+        elif self.cur_method == 'DELETE' and self.cur_object == 'Query':
+            
+            try:
+                
+                json_dump = json.dumps(self.cur_file_data)
+                DesktopQueryDelete.model_validate_json(json_dump) # // logic can be separated
+            
+            except ValidationError as err:
+                session.close()
+                print(err)
+                return False
+            
+            query_id: uuid.UUID = None
+            
+            # getting query id to get session 
+            for key, value in self.cur_file_data.items():
+                
+                if key == 'query_id':
+                    
+                    query_id = uuid.UUID(value)
+                    
+            
+            if query_id:
+            
+                query_get = session.get(Database.QueryDB, query_id)
+                    
+                if query_get:
+                        
+                    session.delete(query_get)
+                
+                else:
+                    
+                    return False
+        
+        elif self.cur_method == 'DELETE' and self.cur_object == 'Order':
+            
+            try:
+                
+                json_dump = json.dumps(self.cur_file_data)
+                DesktopOrderDelete.model_validate_json(json_dump) # // logic can be separated
+            
+            except ValidationError as err:
+                session.close()
+                print(err)
+                return False
+            
+            order_id: uuid.UUID = None
+            
+            # getting order id to get session 
+            for key, value in self.cur_file_data.items():
+                
+                if key == 'order_id':
+                    
+                    order_id = uuid.UUID(value)
+                    
+            
+            if order_id:
+            
+                order_get = session.get(Database.OrderDB, order_id)
+                    
+                if order_get:
+                        
+                    session.delete(order_get)
+                
+                else:
+                    
+                    return False
+        
+        elif self.cur_method == 'DELETE' and self.cur_object == 'Item':
+            
+            try:
+                
+                json_dump = json.dumps(self.cur_file_data)
+                DesktopItemDelete.model_validate_json(json_dump) # // logic can be separated
+            
+            except ValidationError as err:
+                session.close()
+                print(err)
+                return False
+            
+            item_id: uuid.UUID = None
+            
+            # getting item id to get session 
+            for key, value in self.cur_file_data.items():
+                
+                if key == 'item_id':
+                    
+                    item_id = uuid.UUID(value)
+                    
+            
+            if item_id:
+            
+                item_get = session.get(Database.ItemDB, item_id)
+                    
+                if item_get:
+                        
+                    session.delete(item_get)
+                
+                else:
+                    
+                    return False
+        
+        elif self.cur_method == 'DELETE' and self.cur_object == 'OP':
+            
+            try:
+                
+                json_dump = json.dumps(self.cur_file_data)
+                DesktopOPDelete.model_validate_json(json_dump) # // logic can be separated
+            
+            except ValidationError as err:
+                session.close()
+                print(err)
+                return False
+            
+            op_id: uuid.UUID = None
+            
+            # getting itemop id to get session 
+            for key, value in self.cur_file_data.items():
+                
+                if key == 'op_id':
+                    
+                    op_id = uuid.UUID(value)
+                    
+            
+            if op_id:
+            
+                op_get = session.get(Database.OptionalParametersDB, op_id)
+                    
+                if op_get:
+                        
+                    session.delete(op_get)
+                
+                else:
+                    
+                    return False
+        
+        session.commit()
+        session.close()
+        return True      
+
+        
     # file is getting validated
     def file_validation(self, file: str) -> bool:
         

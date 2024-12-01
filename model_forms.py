@@ -1,7 +1,6 @@
 from pydantic import Field as FieldP, EmailStr, BaseModel
 from uuid import UUID
 from datetime import date
-from enum import Enum 
 
 
 ############################################################################################################################
@@ -110,3 +109,23 @@ class Query(QueryBase):
 class DesktopQuery(Query):
     method: str = FieldP(pattern=r"POST|DELETE|GET", max_length=6)
     object: str = FieldP(pattern=r"Query", max_length=6)
+    
+class DesktopQueryDelete(BaseModel):
+    method: str = FieldP(pattern=r"POST|DELETE|GET", max_length=6)
+    object: str = FieldP(pattern=r"Query", max_length=6)
+    query_id: UUID
+
+class DesktopOrderDelete(BaseModel):
+    method: str = FieldP(pattern=r"POST|DELETE|GET", max_length=6)
+    object: str = FieldP(pattern=r"Order", max_length=6)
+    order_id: UUID
+    
+class DesktopItemDelete(BaseModel):
+    method: str = FieldP(pattern=r"POST|DELETE|GET", max_length=6)
+    object: str = FieldP(pattern=r"Item", max_length=6)
+    item_id: UUID
+
+class DesktopOPDelete(BaseModel):
+    method: str = FieldP(pattern=r"POST|DELETE|GET", max_length=6)
+    object: str = FieldP(pattern=r"OP", max_length=6)
+    op_id: UUID
