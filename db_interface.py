@@ -1,14 +1,22 @@
-from sqlmodel import SQLModel, Field, create_engine, text
-from pydantic import Field as FieldP, BaseModel
-import uuid
+from sqlmodel import SQLModel, Field, Session
+from sqlalchemy import create_engine, text
 from datetime import date
+from sqlalchemy.orm import sessionmaker
+import uuid
+
 
 class Database:
+    
     def __init__(self):
         sqlite_file_name = "database.db"
         sqlite_url = f"sqlite:///{sqlite_file_name}"
         connect_args = {"check_same_thread": False}
         self.engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine, class_=Session)
+    
+    def get_session(self):
+        return self.SessionLocal()
+            
     class ItemDB(SQLModel, table=True):
         id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
         market_id: uuid.UUID = Field(default_factory=uuid.uuid4)
@@ -48,10 +56,12 @@ class Database:
     class QueryDB(SQLModel, table=True):
         id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
         company_name: str
-
+        
     def init_db(self):
-        SQLModel.metadata.create_all(self.engine)
+        SQLModel.metadata.create_all(self.engine, checkfirst=True)
         with self.engine.connect() as connection:
+            connection.execute(text("PRAGMA journal_mode=WAL"))
             connection.execute(text("PRAGMA foreign_keys=ON"))
+
     def return_engine(self):
         return self.engine
