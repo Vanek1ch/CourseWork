@@ -1,7 +1,6 @@
 from time import sleep
 from multiprocessing import Process
 from controllers.modules.file_processing.file_worker import FilesController
-from controllers.main_controller import DbController
 import multiprocessing
 
 class FileController:
@@ -40,4 +39,4 @@ class FileController:
             self.server_process.terminate()
             self.server_process.join()
             self.server_process = None
-            print("Обработчик файлов")
+            print("Обработчик файлов завершил работу")

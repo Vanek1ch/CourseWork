@@ -1,5 +1,5 @@
 from interface.interface import *
-from controllers.main_controller import DbController
+from controllers.db_controller import DbController
 
 def init_bd():
     

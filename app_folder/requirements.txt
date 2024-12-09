@@ -1,0 +1,8 @@
+fastapi==0.115.6
+pandas==2.2.3
+pydantic==2.10.3
+PyQt5==5.15.11
+SQLAlchemy==2.0.36
+sqlmodel==0.0.22
+uvicorn==0.32.1
+openpyxl

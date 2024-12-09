@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt
 
 from controllers.server_controller import ServerController
 from controllers.file_controller import FileController
+from controllers.export_controller import ExportController
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -64,6 +65,8 @@ class MainWindow(QMainWindow):
         self.server_tab = QWidget()
         self.server_layout = QVBoxLayout()
         self.server_status_label = QLabel("Сервер не запущен")
+        self.server_status_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        self.server_status_label.setAlignment(Qt.AlignCenter)  # Центрирование текста
         self.server_layout.addWidget(self.server_status_label)
 
         self.start_server_button = QPushButton("Запустить сервер")
@@ -92,26 +95,53 @@ class MainWindow(QMainWindow):
 
         self.fw_tab = QWidget()
         self.fw_layout = QVBoxLayout()
-        self.fw_status_label = QLabel("Сервер не запущен")
+        self.fw_status_label = QLabel("Обработчик файлов не запущен")
+        self.fw_status_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        self.fw_status_label.setAlignment(Qt.AlignCenter)  # Центрирование текста
         self.fw_layout.addWidget(self.fw_status_label)
 
-        self.start_fw_button = QPushButton("Запустить сервер")
+        self.start_fw_button = QPushButton("Запустить обработчик файлов")
         self.start_fw_button.clicked.connect(self.start_fw)
         self.fw_layout.addWidget(self.start_fw_button)
 
-        self.stop_fw_button = QPushButton("Остановить сервер")
+        self.stop_fw_button = QPushButton("Остановить обработчик файлов")
         self.stop_fw_button.clicked.connect(self.stop_fw)
         self.stop_fw_button.setEnabled(False)  # Отключаем, пока сервер не запущен
         self.fw_layout.addWidget(self.stop_fw_button)
 
         self.fw_tab.setLayout(self.fw_layout)
-        self.tabs.addTab(self.fw_tab, "Сервер")
+        self.tabs.addTab(self.fw_tab, "Обработчик файлов")
 
         # Инициализация fwController
         self.fw_controller = FileController()
         
 #########################################################################
 ########################### FILE_WORKER END #############################
+#########################################################################
+
+#########################################################################
+############################## EXPORT ###################################
+#########################################################################
+
+        self.export_tab = QWidget()
+        self.export_layout = QVBoxLayout()
+        self.export_status_label = QLabel("Экспортировать в excel")
+        self.export_status_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        self.export_status_label.setAlignment(Qt.AlignCenter)  # Центрирование текста
+        self.export_layout.addWidget(self.export_status_label)
+
+        self.start_export_button = QPushButton("Экспорт в Excel")
+        self.start_export_button.clicked.connect(self.start_export)
+        self.export_layout.addWidget(self.start_export_button)
+
+        self.export_tab.setLayout(self.export_layout)
+        self.tabs.addTab(self.export_tab, "Экспорт файлов")
+
+        # Инициализация ExportController
+        self.export_controller = ExportController()
+        
+#########################################################################
+############################ EXPORT END #################################
 #########################################################################
 
 
@@ -149,6 +179,10 @@ class MainWindow(QMainWindow):
         self.fw_status_label.setText("Обработчик файлов остановлен")
         self.start_fw_button.setEnabled(True)
         self.stop_fw_button.setEnabled(False)
+        
+    # export
+    def start_export(self):
+        self.export_controller.start_ec()
 
 #########################################################################
 ############################# DEFS END ##################################

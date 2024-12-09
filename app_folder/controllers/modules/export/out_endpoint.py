@@ -1,19 +1,11 @@
-from modules.db_sqlite.db_interface import *
-from sqlmodel import Session, select
-from modules.db_sqlite.models.model_forms import *
-from modules.db_sqlite.db_interface import *
+from sqlmodel import select
+from ..db_sqlite.models.model_forms_bd import *
+from ..db_sqlite.db_interface import Database
 from fastapi.encoders import jsonable_encoder
+from datetime import datetime
+
 import pandas as pd
-
-Controller = Database()
-Controller.init_db() # later to delete because of server
-
-engine = Controller.return_engine()
-
-# func to get session
-def get_session():
-    session = Session(engine)
-    return session
+import os 
 
 class ExcelExport:
     
@@ -23,17 +15,26 @@ class ExcelExport:
         self.orders = None
         self.items = None
         self.ops = None
+        self.main_dir = 'export'
     
-    def get_data(self,):
+    def get_session(self):
         
-        session = get_session()
+        controller = Database()
+        
+        session = controller.get_session()
+
+        return session
+        
+    def get_data(self):
+        
+        session = self.get_session()
         
         try:
             
-            self.queryes = jsonable_encoder(session.exec(select(Database.QueryDB)).all())
-            self.orders = jsonable_encoder(session.exec(select(Database.OrderDB)).all())
-            self.items = jsonable_encoder(session.exec(select(Database.ItemDB)).all())
-            self.ops = jsonable_encoder(session.exec(select(Database.OptionalParametersDB)).all())
+            self.queryes = jsonable_encoder(session.exec(select(QueryDB)).all())
+            self.orders = jsonable_encoder(session.exec(select(OrderDB)).all())
+            self.items = jsonable_encoder(session.exec(select(ItemDB)).all())
+            self.ops = jsonable_encoder(session.exec(select(OptionalParametersDB)).all())
             
             self.dict_obj = {'queryes': self.queryes, 'orders':self.orders, 'items':self.items, 'ops': self.ops}
 
@@ -43,18 +44,30 @@ class ExcelExport:
     def write_to_excel(self,):
         
         try:
+            
+            if not os.path.exists(self.main_dir):
+            
+                os.mkdir(path=self.main_dir)
+            
+            os.chdir(self.main_dir)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.name = f"export_{timestamp}.xlsx"
         
-            with pd.ExcelWriter('outfile.xlsx') as writer:
+            with pd.ExcelWriter(self.name) as writer:
                 
                 for key, value in self.dict_obj.items():
                     
                     obj = pd.DataFrame(value)
                     
                     obj.to_excel(writer, key)
+            
+            return True
         
         except Exception as err:
+            
             pass
         
-excelout = ExcelExport()
-excelout.get_data()
-excelout.write_to_excel()
+        finally:
+            
+            os.chdir("..")

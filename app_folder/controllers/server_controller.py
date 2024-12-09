@@ -1,5 +1,4 @@
 from controllers.modules.server.server import Server
-from controllers.main_controller import DbController
 from multiprocessing import Process
 
 import uvicorn
