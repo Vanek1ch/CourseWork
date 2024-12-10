@@ -228,7 +228,7 @@ class Server:
             successful_orders = []
             unsuccessful_orders = []
             
-            db_query = session.get(Database.QueryDB, query_id)
+            db_query = session.get(QueryDB, query_id)
             if not db_query:
                 return JSONResponse(status_code=404, content=jsonable_encoder( f"Запроса с id: {query_id} не существует!"))
             else:
@@ -237,14 +237,14 @@ class Server:
                     if not order.id:
                         id = uuid4()
                         order.id = id
-                        db_order = Database.OrderDB.model_validate(order)
+                        db_order = OrderDB.model_validate(order)
                         db_order.query_id = query_id
                         session.add(db_order)
                         session.commit()
                         successful_orders.append(order.id)
                     
                     elif order.id:
-                        order_get = session.get(Database.OrderDB, order.id)
+                        order_get = session.get(OrderDB, order.id)
                         
                         if not order_get:
                             unsuccessful_orders.append(order.id)
@@ -378,7 +378,7 @@ class Server:
                 return_query = Query.model_validate(query_get)
                 
                 
-                orders_get = session.exec(select(Database.OrderDB).where(Database.OrderDB.query_id == q_id)).all()
+                orders_get = session.exec(select(OrderDB).where(OrderDB.query_id == q_id)).all()
                 
                 if orders_get:
                     
@@ -390,7 +390,7 @@ class Server:
                         
                         order = Order.model_validate(order)
                         
-                        items_get = session.exec(select(Database.ItemDB).where(Database.ItemDB.order_id == order.id)).all()
+                        items_get = session.exec(select(ItemDB).where(ItemDB.order_id == order.id)).all()
                         
                         orders.append(order)
                         
@@ -410,7 +410,7 @@ class Server:
                                 
                                 items.append(item)
                                 
-                                op_get = session.exec(select(Database.OptionalParametersDB).where(Database.OptionalParametersDB.item_id == item.id)).all()
+                                op_get = session.exec(select(OptionalParametersDB).where(OptionalParametersDB.item_id == item.id)).all()
 
                                 if op_get:
                                     

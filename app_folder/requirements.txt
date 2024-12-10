@@ -6,3 +6,5 @@ SQLAlchemy==2.0.36
 sqlmodel==0.0.22
 uvicorn==0.32.1
 openpyxl
+pyinstaller
+pydantic[email]
