@@ -1,8 +1,5 @@
-from sqlmodel import Field, Session
+from sqlmodel import Session
 from sqlalchemy import create_engine, event
-from datetime import date
-from sqlalchemy.orm import sessionmaker
-import uuid
 
 
 class Database:

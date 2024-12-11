@@ -4,12 +4,13 @@ import os
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, QLabel, QPushButton, QWidget
+from PyQt5.QtWidgets import QApplication, QMessageBox, QMainWindow, QLineEdit, QTabWidget, QVBoxLayout, QLabel, QPushButton, QWidget
 from PyQt5.QtCore import Qt
 
 from controllers.server_controller import ServerController
 from controllers.file_controller import FileController
 from controllers.export_controller import ExportController
+from interface.inf_bd_controller import Database, create_user, login_user
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -17,9 +18,158 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Система обработки заказов")
         self.setGeometry(200, 200, 800, 600)
         self.setFixedSize(800, 600)
+        
+        self.user_role: str = None
 
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
+
+        self.create_login_page()
+        self.create_registration_page()
+        self.tabs.setCurrentWidget(self.login_tab)
+        
+#########################################################################
+############################ LOGIN PAGE #################################
+#########################################################################
+
+    def create_login_page(self):
+        self.login_tab = QWidget()
+        self.login_layout = QVBoxLayout()
+
+        # Заголовок: "Вход в аккаунт"
+        self.login_title = QLabel("Вход в аккаунт")
+        self.login_title.setStyleSheet("font-size: 24px; font-weight: bold;")
+        self.login_title.setAlignment(Qt.AlignCenter)
+
+        # Поле ввода логина
+        self.login_label = QLabel("Логин:")
+        self.login_input = QLineEdit()
+        self.login_input.setPlaceholderText("Введите ваш логин")
+
+        # Поле ввода пароля
+        self.password_label = QLabel("Пароль:")
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Введите ваш пароль")
+        self.password_input.setEchoMode(QLineEdit.Password)
+
+        # Кнопка входа
+        self.login_button = QPushButton("Войти")
+        self.login_button.setFixedSize(200, 40)
+        self.login_button.clicked.connect(self.login)
+
+        # Кнопка регистрации
+        self.register_button = QPushButton("Зарегистрироваться")
+        self.register_button.setFixedSize(200, 40)
+        self.register_button.clicked.connect(self.open_registration_page)
+
+        # Добавляем элементы в layout
+        self.login_layout.addWidget(self.login_title)
+        self.login_layout.addWidget(self.login_label)
+        self.login_layout.addWidget(self.login_input)
+        self.login_layout.addWidget(self.password_label)
+        self.login_layout.addWidget(self.password_input)
+        self.login_layout.addWidget(self.login_button, alignment=Qt.AlignCenter)
+        self.login_layout.addWidget(self.register_button, alignment=Qt.AlignCenter)
+
+        self.login_tab.setLayout(self.login_layout)
+        self.tabs.addTab(self.login_tab, "Вход")
+
+#########################################################################
+########################## REGISTRATION PAGE ###########################
+#########################################################################
+
+    def create_registration_page(self):
+        self.registration_tab = QWidget()
+        self.registration_layout = QVBoxLayout()
+
+        # Заголовок: "Регистрация"
+        self.registration_title = QLabel("Регистрация")
+        self.registration_title.setStyleSheet("font-size: 24px; font-weight: bold;")
+        self.registration_title.setAlignment(Qt.AlignCenter)
+
+        # Поле ввода логина
+        self.new_login_label = QLabel("Логин:")
+        self.new_login_input = QLineEdit()
+        self.new_login_input.setPlaceholderText("Введите логин")
+
+        # Поле ввода пароля
+        self.new_password_label = QLabel("Пароль:")
+        self.new_password_input = QLineEdit()
+        self.new_password_input.setPlaceholderText("Введите пароль")
+        self.new_password_input.setEchoMode(QLineEdit.Password)
+
+        # Кнопка регистрации
+        self.create_account_button = QPushButton("Создать аккаунт")
+        self.create_account_button.setFixedSize(200, 40)
+        self.create_account_button.clicked.connect(self.register)
+
+        # Кнопка возврата к входу
+        self.back_to_login_button = QPushButton("Назад к входу")
+        self.back_to_login_button.setFixedSize(200, 40)
+        self.back_to_login_button.clicked.connect(self.open_login_page)
+
+        # Добавляем элементы в layout
+        self.registration_layout.addWidget(self.registration_title)
+        self.registration_layout.addWidget(self.new_login_label)
+        self.registration_layout.addWidget(self.new_login_input)
+        self.registration_layout.addWidget(self.new_password_label)
+        self.registration_layout.addWidget(self.new_password_input)
+        self.registration_layout.addWidget(self.create_account_button, alignment=Qt.AlignCenter)
+        self.registration_layout.addWidget(self.back_to_login_button, alignment=Qt.AlignCenter)
+
+        self.registration_tab.setLayout(self.registration_layout)
+        self.tabs.addTab(self.registration_tab, "Регистрация")
+
+#########################################################################
+############################ LOGIN/REGISTRATION #########################
+#########################################################################
+
+    def login(self):
+        login = self.login_input.text()
+        password = self.password_input.text()
+
+        if login and password:
+            
+            key, *args = login_user(name=login, password=password).items()
+            
+            if not key:
+                
+                QMessageBox.warning(self, "Ошибка", args)
+            
+            else:
+                
+                QMessageBox.warning(self, "Успех!", "Вы успешно вошли!")
+                
+                self.user_role = args
+            
+        else:
+            
+            QMessageBox.warning(self, "Ошибка", "Все поля должны быть заполнены")
+
+    def register(self):
+        new_login = self.new_login_input.text()
+        new_password = self.new_password_input.text()
+
+        if new_login and new_password:
+            
+            if create_user(name = new_login, password = new_password):
+            
+                QMessageBox.warning(self, "Успех", "Пользователь создан верно!")
+                
+            else:
+                QMessageBox.warning(self, "Ошибка", "Данный пользователь уже существует!")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Все поля должны быть заполнены")
+
+    def open_login_page(self):
+        self.tabs.setCurrentWidget(self.login_tab)
+
+    def open_registration_page(self):
+        self.tabs.setCurrentWidget(self.registration_tab)
+        
+    def separator(self):
+        pass
+
 
 #########################################################################
 ############################## MAIN_PAGE ################################

@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field
-import uuid
 from datetime import date
+
+import uuid
 
 class ItemDB(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
